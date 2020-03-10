@@ -11,7 +11,7 @@ import MultipeerConnectivity
 
 class Device: NSObject, MCSessionDelegate {
     let peerID: MCPeerID
-    var sessions: [MCSession? : [Strings]]
+    var session: MCSession? //[MCSession? : [Strings]]
     var name: String
     var state = MCSessionState.notConnected
     var lastMessageReceived: Message?
@@ -41,7 +41,12 @@ class Device: NSObject, MCSessionDelegate {
         browser.invitePeer(self.peerID, to: self.session!, withContext: nil, timeout: 10)
     }
 
-
+    func send(text: String) throws {
+        let message = Message(body: text, isRouting: false)
+        let payload = try JSONEncoder().encode(message)
+        try self.session?.send(payload, toPeers: [self.peerID], with: .reliable)
+    }
+    
     public func session(_ session: MCSession, peer peerID: MCPeerID, didChange state: MCSessionState) {
         self.state = state
         NotificationCenter.default.post(name: MPCManager.Notifications.deviceDidChangeState, object: self)
