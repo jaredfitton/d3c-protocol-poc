@@ -130,6 +130,8 @@ class MPCManager: NSObject, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBr
         
         deviceIsConnecting = true
         
+        
+        
         let device = MPCManager.instance.device(for: peerID)
         device.invite(with: self.browser)
     }

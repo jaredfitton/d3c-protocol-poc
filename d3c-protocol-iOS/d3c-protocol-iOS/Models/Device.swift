@@ -97,7 +97,13 @@ class Device: NSObject, MCSessionDelegate {
         
         switch message.flag {
         case 0: //Standard Message
+            
+            //Is the dest device = this device
             self.lastMessageReceived = message
+            
+            //else
+            // check to see if
+            
             NotificationCenter.default.post(name: Device.messageReceivedNotification, object: message, userInfo: ["from": self])
         case 1: // Routing Info Update
             handleRoutingInfoUpdate(message: message)
@@ -120,6 +126,7 @@ class Device: NSObject, MCSessionDelegate {
             return
         }
         
+        NotificationCenter.default.post(name: MPCManager.Notifications.deviceDidChangeState, object: self)
 
     }
     
@@ -163,7 +170,7 @@ class Device: NSObject, MCSessionDelegate {
         logMessage(message: "Original Routing Info:\n\(self.routingInfo)")
         
         for route in routes {
-            if !self.routingInfo.contains(route) {
+            if !self.routingInfo.contains(route) && route != MPCManager.instance.localPeerID.displayName {
                 self.routingInfo.insert(route)
             } else {
                 logMessage(message: "Already contains route to \(route)")
