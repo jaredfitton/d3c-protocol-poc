@@ -85,14 +85,6 @@ class MPCManager: NSObject, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBr
         NotificationCenter.default.addObserver(self, selector: #selector(enteredBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
     }
     
-    @objc func enteredBackground() {
-        for device in self.devices {
-            device.disconnect()
-//            logMessage(message: "Device '\(discDevice.name)' disconnected")
-//            self.devices.remove(at: deviceIndex)
-        }
-    }
-    
     func advertiser(_ advertiser: MCNearbyServiceAdvertiser, didReceiveInvitationFromPeer peerID: MCPeerID, withContext context: Data?, invitationHandler: @escaping (Bool, MCSession?) -> Void) {
         
         // Only one device can be connecting at a time to prevent closed loop
@@ -182,13 +174,49 @@ class MPCManager: NSObject, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBr
         return nil
     }
     
+    func getRouteUIIndex(with peerId: MCPeerID) -> Int? {
+        
+        if routeMessages.count == 0 {
+            return nil
+        }
+        
+        for i in 0...routeMessages.count-1 {
+            if self.routeMessages[i].destinationName == peerId.displayName {
+                return i
+            }
+        }
+        return nil
+    }
+    
+    @objc func enteredBackground() {
+        for device in self.devices {
+            device.disconnect()
+            logMessage(message: "Device '\(device.name)' disconnected")
+        }
+        self.devices = []
+        self.routeMessages = []
+        
+        NotificationCenter.default.post(name: MPCManager.Notifications.deviceDidChangeState, object: self)
+    }
+    
     func disconnectDevice(peerID: MCPeerID) {
+        // Remove RouteUI
+        guard let routeUIIndex = getRouteUIIndex(with: peerID) else {
+            return
+        }
+        self.routeMessages.remove(at: routeUIIndex)
+        logMessage(message: "Removed RouteUI for \(peerID.displayName)")
+        
+        
+        // Disconnect actual device
         guard let deviceIndex = getDeviceIndex(with: peerID) else {
             return
         }
         self.devices[deviceIndex].disconnect()
         logMessage(message: "Disconnected from \(self.devices[deviceIndex].name)")
         self.devices.remove(at: deviceIndex)
+        
+        NotificationCenter.default.post(name: MPCManager.Notifications.deviceDidChangeState, object: self)
     }
     
     func logMessage(message: String) {

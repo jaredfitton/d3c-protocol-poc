@@ -15,7 +15,6 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     var routingTable: [RouteUI] = []
     
     @objc func reload( ){
-        print("Got here")
         self.routingTable = MPCManager.instance.routeMessages
         
         //self.devices = Array(MPCManager.instance.devices).sorted(by: { $0.name < $1.name })
@@ -53,7 +52,6 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
 
 
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
-        print("Num rows")
         return self.routingTable.count
             //self.devices.count
     }
