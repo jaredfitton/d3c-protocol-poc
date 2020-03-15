@@ -57,10 +57,26 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
     }
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "cell") ?? UITableViewCell(style: .subtitle, reuseIdentifier: "cell")
+//        let cell = tableView.dequeueReusableCell(withIdentifier: "cell") ?? UITableViewCell(style: .subtitle, reuseIdentifier: "cell")
+//        let device = self.routingTable[indexPath.row]
+//        cell.textLabel?.text = "\(device.destinationName)"
+//        cell.detailTextLabel?.text = device.lastMessage
+        
         let device = self.routingTable[indexPath.row]
-        cell.textLabel?.text = "\(device.destinationName)"
-        cell.detailTextLabel?.text = device.lastMessage
+        let cell = tableView.dequeueReusableCell(withIdentifier: "deviceInfo", for: indexPath) as! TableViewCell
+        
+        cell.deviceName.text = device.destinationName
+        
+        if device.lastMessage == "" {
+            cell.message.text = "No messages recieved"
+        } else {
+            cell.message.text = "\(device.lastMessage)"
+        }
+        
+//        let RTTLabel = ""
+        
+        cell.RTT.text = "Sent Message RTT: \(device.RTT)"
+        
         return cell
     }
 

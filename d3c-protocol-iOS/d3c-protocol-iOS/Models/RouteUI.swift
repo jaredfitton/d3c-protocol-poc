@@ -12,6 +12,7 @@ class RouteUI {
     
     var destinationName: String
     var lastMessage: String = ""
+    var RTT: String = ""
     
     init(destinationName: String) {
         self.destinationName = destinationName

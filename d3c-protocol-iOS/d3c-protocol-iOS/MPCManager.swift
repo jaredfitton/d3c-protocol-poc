@@ -166,7 +166,12 @@ class MPCManager: NSObject, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBr
     }
     
     func getDeviceIndex(with peerId: MCPeerID) -> Int? {
-        for i in 0...1 {
+        
+        if self.devices.count == 0 {
+            return nil
+        }
+        
+        for i in 0...self.devices.count-1 {
             if self.devices[i].peerID == peerId {
                 return i
             }

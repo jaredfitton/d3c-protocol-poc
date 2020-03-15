@@ -13,6 +13,7 @@ import MultipeerConnectivity
 //  message = 0
 //  routingInfoAddition = 1
 //  routingRequest = 2
+//  ackMessage = 3
 
 struct Message: Codable {
     let body: String
@@ -20,5 +21,6 @@ struct Message: Codable {
     let routingInfo: Set<String>
     let sendingDevice: String
     let destinationDevice: String
+   // let routingPath: [String]
 }
 

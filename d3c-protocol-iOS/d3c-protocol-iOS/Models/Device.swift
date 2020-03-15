@@ -19,6 +19,8 @@ class Device: NSObject, MCSessionDelegate {
     static let messageReceivedNotification = Notification.Name("DeviceDidReceiveMessage")
     var routingInfo: Set<String> = []
     var didAcceptInvitation: Bool = false
+    var messageSendTime: TimeInterval = 0
+    var messageAckRecieved: Bool = false
     
     init(peerID: MCPeerID) {
         self.name = peerID.displayName
@@ -49,8 +51,17 @@ class Device: NSObject, MCSessionDelegate {
 
     func send(text: String, with flag: Int, senderName: String, destinationName: String) throws {
         
+        // Check to see if this device is sending a message
+        if flag == 0 && senderName == MPCManager.instance.localPeerID.displayName {
+            self.messageSendTime = Date.timeIntervalSinceReferenceDate
+            self.messageAckRecieved = false
+            logMessage(message: "Set message send time to \(self.messageSendTime)")
+        }
+        
+        
         var routingInfoToSend: Set<String> = []
         
+        // Compile the routing table for this device and prepare to send
         if flag == 1 || flag == 2 {
             for device in MPCManager.instance.devices {
                 if device != self {
@@ -59,7 +70,6 @@ class Device: NSObject, MCSessionDelegate {
                     }
                 }
             }
-            
             routingInfoToSend.insert(MPCManager.instance.localPeerID.displayName)
         }
         
@@ -126,6 +136,10 @@ class Device: NSObject, MCSessionDelegate {
                MPCManager.instance.deviceIsConnecting = false
             }
             
+        case 3: // Ack Message
+            handleAckMessage(message: message)
+            
+            
         default:
             print("Unknown flag in message")
             return
@@ -135,12 +149,57 @@ class Device: NSObject, MCSessionDelegate {
 
     }
     
+    func handleAckMessage(message: Message) {
+        
+        if message.destinationDevice != MPCManager.instance.localPeerID.displayName {
+            
+            // Forward the message to the next device using the routing table
+            let devices = MPCManager.instance.devices
+            for device in devices {
+                if device != self {
+                    
+                    if device.routingInfo.contains(message.destinationDevice) {
+                        do {
+                            try device.send(text: message.body,
+                                            with: 3,
+                                            senderName: message.sendingDevice,
+                                            destinationName: message.destinationDevice)
+                            logMessage(message: "Forwarded ack message to \(device.name)")
+                        } catch {
+                            logMessage(message: error.localizedDescription)
+                        }
+                    } else {
+                        logMessage(message: "Destination device '\(message.destinationDevice)' is not in '\(device.name)''s routing table")
+                    }
+                }
+            }
+            
+            return
+        }
+        
+        let receiveTime = TimeInterval(message.body)
+        let RTT = String(receiveTime!-messageSendTime)
+        
+        // Find the correct RouteUI object and update the last message
+        for route in MPCManager.instance.routeMessages {
+            if route.destinationName == message.sendingDevice {
+                route.RTT = RTT
+            }
+        }
+        
+        self.messageAckRecieved = true
+        
+        NotificationCenter.default.post(name: Device.messageReceivedNotification, object: message, userInfo: ["from": self])
+    }
+    
     func handleStandardMessage(message: Message) {
         
         logMessage(message: "Recieved message '\(message.body)' from '\(message.sendingDevice)'")
         
+        let currentDeviceName = MPCManager.instance.localPeerID.displayName
+        
         // Display the message if this device is the message destination
-        if message.destinationDevice == MPCManager.instance.localPeerID.displayName {
+        if message.destinationDevice == currentDeviceName {
             // Find the correct RouteUI object and update the last message
             for route in MPCManager.instance.routeMessages {
                 if route.destinationName == message.sendingDevice {
@@ -149,6 +208,15 @@ class Device: NSObject, MCSessionDelegate {
             }
             
             NotificationCenter.default.post(name: Device.messageReceivedNotification, object: message, userInfo: ["from": self])
+            
+            let time = String(Date.timeIntervalSinceReferenceDate)
+            
+            // Send ack message
+            do {
+                try self.send(text: time, with: 3, senderName: currentDeviceName, destinationName: message.sendingDevice)
+            } catch {
+                logMessage(message: error.localizedDescription)
+            }
             
             return
         }
