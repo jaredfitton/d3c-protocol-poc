@@ -2,7 +2,7 @@
 //  MPCManager.swift
 //  d3c-protocol-iOS
 //
-//  Created by Jared Fitton on 3/10/20.
+//  Created by Jared Fitton on 2/10/20.
 //  Copyright © 2020 Jared Fitton. All rights reserved.
 //
 
@@ -17,6 +17,7 @@ class MPCManager: NSObject, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBr
     let serviceType = "d3c-poc"
     var devices: [Device] = []
     var deviceIsConnecting: Bool = false
+    var routeMessages: [RouteUI] = []
     
     var connectedDevices: [Device] {
         return self.devices.filter { $0.state == .connected }
@@ -54,11 +55,34 @@ class MPCManager: NSObject, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBr
         return device
     }
 
+    func prepareToSendMessage(messageBody: String, destinationName: String) {
+        
+        // Find the device that contains the route and send
+        for device in self.devices {
+            if device.routingInfo.contains(destinationName) {
+                
+                do {
+                    try device.send(text: messageBody,
+                            with: 0,
+                            senderName: self.localPeerID.displayName,
+                            destinationName: destinationName)
+                    logMessage(message: "Sent message '\(messageBody)' to \(destinationName)")
+                    
+                } catch {
+                    logMessage(message: error.localizedDescription)
+                }
+                
+            } else {
+                logMessage(message: "Destination device '\(destinationName)' not found in routing table")
+            }
+        }
+    }
+    
     func start() {
         self.advertiser.startAdvertisingPeer()
         self.browser.startBrowsingForPeers()
         
-        NotificationCenter.default.addObserver(self, selector: #selector(enteredBackground), name: NSNotification.Name.UIApplicationDidEnterBackground, object: nil)
+        NotificationCenter.default.addObserver(self, selector: #selector(enteredBackground), name: UIApplication.didEnterBackgroundNotification, object: nil)
     }
     
     @objc func enteredBackground() {

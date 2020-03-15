@@ -2,7 +2,7 @@
 //  AppDelegate.swift
 //  d3c-protocol-iOS
 //
-//  Created by Jared Fitton on 3/9/20.
+//  Created by Jared Fitton on 2/10/20.
 //  Copyright © 2020 Jared Fitton. All rights reserved.
 //
 
@@ -15,6 +15,10 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
 
     func application(_ application: UIApplication, didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]?) -> Bool {
         // Override point for customization after application launch.
+        
+        MPCManager.instance.start()
+        print("MPCManager Started")
+        
         return true
     }
 

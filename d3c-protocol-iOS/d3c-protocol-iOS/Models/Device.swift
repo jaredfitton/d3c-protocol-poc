@@ -2,7 +2,7 @@
 //  Device.swift
 //  d3c-protocol-iOS
 //
-//  Created by Jared Fitton on 3/10/20.
+//  Created by Jared Fitton on 2/10/20.
 //  Copyright © 2020 Jared Fitton. All rights reserved.
 //
 
@@ -63,7 +63,12 @@ class Device: NSObject, MCSessionDelegate {
             routingInfoToSend.insert(MPCManager.instance.localPeerID.displayName)
         }
         
-        let message = Message(body: text, flag: flag, routingInfo: routingInfoToSend)
+        let message = Message(body: text,
+                              flag: flag,
+                              routingInfo: routingInfoToSend,
+                              sendingDevice: senderName,
+                              destinationDevice: destinationName)
+        
         let payload = try JSONEncoder().encode(message)
         
         do {
@@ -104,14 +109,7 @@ class Device: NSObject, MCSessionDelegate {
         
         switch message.flag {
         case 0: //Standard Message
-            
-            //Is the dest device = this device
-            self.lastMessageReceived = message
-            
-            //else
-            // check to see if
-            
-            NotificationCenter.default.post(name: Device.messageReceivedNotification, object: message, userInfo: ["from": self])
+            handleStandardMessage(message: message)
         case 1: // Routing Info Update
             handleRoutingInfoUpdate(message: message)
             
@@ -135,6 +133,46 @@ class Device: NSObject, MCSessionDelegate {
         
         NotificationCenter.default.post(name: MPCManager.Notifications.deviceDidChangeState, object: self)
 
+    }
+    
+    func handleStandardMessage(message: Message) {
+        
+        logMessage(message: "Recieved message '\(message.body)' from '\(message.sendingDevice)'")
+        
+        // Display the message if this device is the message destination
+        if message.destinationDevice == MPCManager.instance.localPeerID.displayName {
+            // Find the correct RouteUI object and update the last message
+            for route in MPCManager.instance.routeMessages {
+                if route.destinationName == message.sendingDevice {
+                    route.lastMessage = message.body
+                }
+            }
+            
+            NotificationCenter.default.post(name: Device.messageReceivedNotification, object: message, userInfo: ["from": self])
+            
+            return
+        }
+        
+        // Forward the message to the next device using the routing table
+        let devices = MPCManager.instance.devices
+        for device in devices {
+            if device != self {
+                
+                if device.routingInfo.contains(message.destinationDevice) {
+                    do {
+                        try device.send(text: message.body,
+                                        with: 0,
+                                        senderName: message.sendingDevice,
+                                        destinationName: message.destinationDevice)
+                    } catch {
+                        logMessage(message: error.localizedDescription)
+                    }
+                } else {
+                    logMessage(message: "Destination device '\(message.destinationDevice)' is not in '\(device.name)''s routing table")
+                }
+            }
+        }
+        
     }
     
     func handleRoutingInfoUpdate(message: Message) {
@@ -179,6 +217,9 @@ class Device: NSObject, MCSessionDelegate {
         for route in routes {
             if !self.routingInfo.contains(route) && route != MPCManager.instance.localPeerID.displayName {
                 self.routingInfo.insert(route)
+                
+                //This is where messages from devices will be store, used only by UI
+                MPCManager.instance.routeMessages.append(RouteUI(destinationName: route))
             } else {
                 logMessage(message: "Already contains route to \(route)")
             }
