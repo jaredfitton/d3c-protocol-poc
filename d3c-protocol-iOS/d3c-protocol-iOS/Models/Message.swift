@@ -7,16 +7,17 @@
 //
 
 import Foundation
+import MultipeerConnectivity
+
+//  Flag Meaning:
+//  message = 0
+//  routingInfoAddition = 1
+//  routingInfoNegation = 3
+//  routingRequest = 2
 
 struct Message: Codable {
+//  let destinationDevice: String
     let body: String
-    let isRouting: Bool
-}
-
-extension Device {
-    func send(text: String) throws {
-        let message = Message(body: text, isRouting: false)
-        let payload = try JSONEncoder().encode(message)
-        try self.session?.send(payload, toPeers: [self.peerID], with: .reliable)
-    }
+    let flag: Int
+    let routingInfo: Set<String>
 }
