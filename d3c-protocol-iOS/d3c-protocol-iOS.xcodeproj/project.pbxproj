@@ -50,7 +50,6 @@
 			children = (
 				099DCA9424183450008E3CD7 /* Device.swift */,
 				099DCA962418347A008E3CD7 /* Message.swift */,
-				099DCA9A2418437C008E3CD7 /* MPCManager.swift */,
 				09AAAF9C241EADCD002D3DAA /* RouteUI.swift */,
 			);
 			path = Models;
@@ -77,6 +76,7 @@
 			children = (
 				099DCA9324183431008E3CD7 /* Models */,
 				09F54670241624D200CA001B /* AppDelegate.swift */,
+				099DCA9A2418437C008E3CD7 /* MPCManager.swift */,
 				09F54672241624D200CA001B /* SceneDelegate.swift */,
 				09F54674241624D200CA001B /* ViewController.swift */,
 				09F54676241624D200CA001B /* Main.storyboard */,
