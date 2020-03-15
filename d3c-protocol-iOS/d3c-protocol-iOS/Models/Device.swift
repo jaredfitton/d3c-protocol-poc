@@ -47,12 +47,19 @@ class Device: NSObject, MCSessionDelegate {
         browser.invitePeer(self.peerID, to: self.session!, withContext: nil, timeout: 10)
     }
 
-    func send(text: String, with flag: Int) throws {
+    func send(text: String, with flag: Int, senderName: String, destinationName: String) throws {
         
         var routingInfoToSend: Set<String> = []
         
         if flag == 1 || flag == 2 {
-            routingInfoToSend = self.routingInfo
+            for device in MPCManager.instance.devices {
+                if device != self {
+                    for route in device.routingInfo {
+                        routingInfoToSend.insert(route)
+                    }
+                }
+            }
+            
             routingInfoToSend.insert(MPCManager.instance.localPeerID.displayName)
         }
         
@@ -78,7 +85,7 @@ class Device: NSObject, MCSessionDelegate {
         // If the state change is a new device connecting to the session
         if state == .connected && self.didAcceptInvitation {
             do {
-                try self.send(text: "", with: 2)
+                try self.send(text: "", with: 2, senderName: "", destinationName: "")
                 logMessage(message: "Sent routing info request to \(peerID.displayName)")
             } catch {
                 logMessage(message: "Error during routing info request =>\n\( error.localizedDescription)")
@@ -142,7 +149,7 @@ class Device: NSObject, MCSessionDelegate {
             if device != self {
                 do {
                     logMessage(message: "Sending routing info to next \(device.name)")
-                    try device.send(text: "", with: 1)
+                    try device.send(text: "", with: 1, senderName: "", destinationName: "")
                 } catch {
                     logMessage(message: "Error broadcasting routing info update to \(device.name)=>\n\(error.localizedDescription)")
                 }
@@ -155,7 +162,7 @@ class Device: NSObject, MCSessionDelegate {
         print("Routing Info: \(message.routingInfo)")
         
         do {
-            try self.send(text: "", with: 1)
+            try self.send(text: "", with: 1, senderName: "", destinationName: "")
         } catch {
             logMessage(message: error.localizedDescription)
         }
