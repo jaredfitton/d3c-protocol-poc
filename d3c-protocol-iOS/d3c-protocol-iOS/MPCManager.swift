@@ -65,7 +65,8 @@ class MPCManager: NSObject, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBr
                     try device.send(text: messageBody,
                             with: 0,
                             senderName: self.localPeerID.displayName,
-                            destinationName: destinationName)
+                            destinationName: destinationName,
+                            routingPath: [])
                     logMessage(message: "Sent message '\(messageBody)' to \(destinationName)")
                     
                 } catch {
@@ -76,6 +77,7 @@ class MPCManager: NSObject, MCNearbyServiceAdvertiserDelegate, MCNearbyServiceBr
                 logMessage(message: "Destination device '\(destinationName)' not found in routing table")
             }
         }
+        return
     }
     
     func start() {

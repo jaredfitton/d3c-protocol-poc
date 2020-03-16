@@ -21,6 +21,7 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         DispatchQueue.main.async {
             self.tableView.reloadData()
         }
+        
     }
     
     
@@ -72,8 +73,6 @@ class ViewController: UIViewController, UITableViewDataSource, UITableViewDelega
         } else {
             cell.message.text = "\(device.lastMessage)"
         }
-        
-//        let RTTLabel = ""
         
         cell.RTT.text = "Sent Message RTT: \(device.RTT)"
         

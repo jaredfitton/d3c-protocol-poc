@@ -21,6 +21,6 @@ struct Message: Codable {
     let routingInfo: Set<String>
     let sendingDevice: String
     let destinationDevice: String
-   // let routingPath: [String]
+    let routingPath: [String]
 }
 

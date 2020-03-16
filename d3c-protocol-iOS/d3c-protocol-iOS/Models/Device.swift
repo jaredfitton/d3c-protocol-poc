@@ -20,7 +20,6 @@ class Device: NSObject, MCSessionDelegate {
     var routingInfo: Set<String> = []
     var didAcceptInvitation: Bool = false
     var messageSendTime: TimeInterval = 0
-    var messageAckRecieved: Bool = false
     
     init(peerID: MCPeerID) {
         self.name = peerID.displayName
@@ -49,12 +48,11 @@ class Device: NSObject, MCSessionDelegate {
         browser.invitePeer(self.peerID, to: self.session!, withContext: nil, timeout: 10)
     }
 
-    func send(text: String, with flag: Int, senderName: String, destinationName: String) throws {
+    func send(text: String, with flag: Int, senderName: String, destinationName: String, routingPath: [String]) throws {
         
         // Check to see if this device is sending a message
         if flag == 0 && senderName == MPCManager.instance.localPeerID.displayName {
             self.messageSendTime = Date.timeIntervalSinceReferenceDate
-            self.messageAckRecieved = false
             logMessage(message: "Set message send time to \(self.messageSendTime)")
         }
         
@@ -73,11 +71,19 @@ class Device: NSObject, MCSessionDelegate {
             routingInfoToSend.insert(MPCManager.instance.localPeerID.displayName)
         }
         
+        // If the device is sending an acknowledgement, we want to include this device
+        // in the route path back to the initial sender
+        var routePath = routingPath
+        if flag == 3 && !routePath.contains(MPCManager.instance.localPeerID.displayName){
+            routePath.append(MPCManager.instance.localPeerID.displayName)
+        }
+        
         let message = Message(body: text,
                               flag: flag,
                               routingInfo: routingInfoToSend,
                               sendingDevice: senderName,
-                              destinationDevice: destinationName)
+                              destinationDevice: destinationName,
+                              routingPath: routePath)
         
         let payload = try JSONEncoder().encode(message)
         
@@ -100,7 +106,7 @@ class Device: NSObject, MCSessionDelegate {
         // If the state change is a new device connecting to the session
         if state == .connected && self.didAcceptInvitation {
             do {
-                try self.send(text: "", with: 2, senderName: "", destinationName: "")
+                try self.send(text: "", with: 2, senderName: "", destinationName: "", routingPath: [])
                 logMessage(message: "Sent routing info request to \(peerID.displayName)")
             } catch {
                 logMessage(message: "Error during routing info request =>\n\( error.localizedDescription)")
@@ -110,7 +116,6 @@ class Device: NSObject, MCSessionDelegate {
     }
     
     public func session(_ session: MCSession, didReceive data: Data, fromPeer peerID: MCPeerID) {
-        
         
         guard let message = try? JSONDecoder().decode(Message.self, from: data) else {
             print("Error decoding message from: \(peerID.displayName)")
@@ -158,12 +163,16 @@ class Device: NSObject, MCSessionDelegate {
             for device in devices {
                 if device != self {
                     
+                    // Get the current routing path and add the current device to it
+                    var routePath = message.routingPath
+                    routePath.append(MPCManager.instance.localPeerID.displayName)
+                    
                     if device.routingInfo.contains(message.destinationDevice) {
                         do {
                             try device.send(text: message.body,
                                             with: 3,
                                             senderName: message.sendingDevice,
-                                            destinationName: message.destinationDevice)
+                                            destinationName: message.destinationDevice, routingPath: routePath)
                             logMessage(message: "Forwarded ack message to \(device.name)")
                         } catch {
                             logMessage(message: error.localizedDescription)
@@ -186,8 +195,6 @@ class Device: NSObject, MCSessionDelegate {
                 route.RTT = RTT
             }
         }
-        
-        self.messageAckRecieved = true
         
         NotificationCenter.default.post(name: Device.messageReceivedNotification, object: message, userInfo: ["from": self])
     }
@@ -213,7 +220,7 @@ class Device: NSObject, MCSessionDelegate {
             
             // Send ack message
             do {
-                try self.send(text: time, with: 3, senderName: currentDeviceName, destinationName: message.sendingDevice)
+                try self.send(text: time, with: 3, senderName: currentDeviceName, destinationName: message.sendingDevice, routingPath: [])
             } catch {
                 logMessage(message: error.localizedDescription)
             }
@@ -231,7 +238,7 @@ class Device: NSObject, MCSessionDelegate {
                         try device.send(text: message.body,
                                         with: 0,
                                         senderName: message.sendingDevice,
-                                        destinationName: message.destinationDevice)
+                                        destinationName: message.destinationDevice, routingPath: [])
                     } catch {
                         logMessage(message: error.localizedDescription)
                     }
@@ -255,7 +262,7 @@ class Device: NSObject, MCSessionDelegate {
             if device != self {
                 do {
                     logMessage(message: "Sending routing info to next \(device.name)")
-                    try device.send(text: "", with: 1, senderName: "", destinationName: "")
+                    try device.send(text: "", with: 1, senderName: "", destinationName: "", routingPath: [])
                 } catch {
                     logMessage(message: "Error broadcasting routing info update to \(device.name)=>\n\(error.localizedDescription)")
                 }
@@ -268,7 +275,7 @@ class Device: NSObject, MCSessionDelegate {
         print("Routing Info: \(message.routingInfo)")
         
         do {
-            try self.send(text: "", with: 1, senderName: "", destinationName: "")
+            try self.send(text: "", with: 1, senderName: "", destinationName: "", routingPath: [])
         } catch {
             logMessage(message: error.localizedDescription)
         }
